@@ -45,6 +45,12 @@ func initDockerClient() (*dclient, error) {
 	return dcl, nil
 }
 
+/*
+Here the image-info need to be parsed and stored in a list of tree structure.
+- All root of trees will be stored in list.
+- Root should be root of images, and leaf will the images visible in `docker images` command.
+*/
+
 type ImageInfo struct {
 	parent        string
 	actualSize    int64
@@ -79,7 +85,7 @@ func (dcl *dclient) getImageDiskUsage(image string) {
 		fmt.Println("---------------------------")
 		count++
 	}
-	fmt.Println(count)
+	fmt.Println("Total leaf Images ", count)
 
 }
 
@@ -91,7 +97,10 @@ func dumpImageTree(image *ImageInfoNode, treeDepth int) bool {
 	if treeDepth > 0 {
 		fmt.Printf("--")
 	}
-	fmt.Printf("%-20s %32s %6d MB %6d MB\n", image.imageInfo.tag, image.imageInfo.parent, image.imageInfo.actualSize/(1024*1024), image.imageInfo.totalSize/(1024*1024))
+	//	refc := image.imageInfo.refrenceCount
+
+	fmt.Printf(" %d  %12s %6d MB %6d MB %s\n", image.imageInfo.refrenceCount, image.imageInfo.parent, image.imageInfo.actualSize/(1024*1024), image.imageInfo.totalSize/(1024*1024), image.imageInfo.tag)
+
 	return dumpImageTree(image.parent, treeDepth+1)
 
 }
@@ -107,7 +116,7 @@ func (dcl *dclient) getImageTree(image *dockerclient.ImageInfo, imageMap map[str
 		//	fmt.Println(image.Id)
 		//If not found in map, add details.
 		parentNode := new(ImageInfoNode)
-		parentNode.imageInfo.parent = image.Parent
+		parentNode.imageInfo.parent = image.Parent[0:12]
 		parentNode.imageInfo.actualSize = image.Size
 		parentNode.imageInfo.totalSize = image.VirtualSize
 		//		parentNode.imageInfo.tag = image.RepoTags
@@ -115,11 +124,13 @@ func (dcl *dclient) getImageTree(image *dockerclient.ImageInfo, imageMap map[str
 		parentNode.imageInfo.refrenceCount = 0
 
 		//Find the Node in map.
-		if imageMap[image.Id] != nil {
-			return imageMap[image.Id]
+		if imageMap[image.Id[0:12]] != nil {
+			temp := imageMap[image.Id]
+			temp.imageInfo.refrenceCount++
+			return temp
 		}
 
-		foundNode, res := findImageTree(image.Id, imageMap)
+		foundNode, res := findImageTree(image.Id[0:12], imageMap)
 		if res {
 			return foundNode
 		}
@@ -150,6 +161,7 @@ func ImageWalk(imageId string, image *ImageInfoNode) (*ImageInfoNode, bool) {
 		return &ImageInfoNode{parent: nil}, false
 	}
 	if image.imageInfo.parent == imageId {
+		image.imageInfo.refrenceCount++
 		return image.parent, true
 	}
 	return ImageWalk(imageId, image.parent)
