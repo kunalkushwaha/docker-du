@@ -28,3 +28,13 @@ func (s *Stack) Peek() interface{} {
 	}
 	return s.data[len(s.data)-1]
 }
+
+func (s *Stack) Dequeue() interface{} {
+	if len(s.data) == 0{
+		return nil
+	}
+
+	data := s.data[0]
+	s.data := s.data[1:len(s.data)]
+	return data
+}
