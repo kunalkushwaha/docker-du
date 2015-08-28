@@ -35,6 +35,19 @@ func (s *Stack) Dequeue() interface{} {
 	}
 
 	data := s.data[0]
-	s.data := s.data[1:len(s.data)]
+	s.data = s.data[1:len(s.data)]
 	return data
 }
+
+func (s *Stack) Size() int {
+	return 	len(s.data)
+}
+/*
+func (s *Stack) Dump() {
+	fmt.Println("--------- Stack --------------")
+	for _, elem := range s.data {
+		fmt.Println(elem)
+	}
+	fmt.Println("--------- Stack --------------")
+}
+*/
